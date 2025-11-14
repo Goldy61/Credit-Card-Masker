@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Special Characters Escaper (XSS Prevention Demo)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .output {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .demo-pair {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .demo-box {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .demo-raw {
+            border-color: #ffc107;
+        }
+        .demo-escaped {
+            border-color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simulate Escaping HTML Special Characters (&lt;, &gt;, ", ', &amp;) to Prevent XSS</h1>
+    <div class="container">
+        <div class="warning">
+            <strong>Warning:</strong> This is a client-side demo for educational purposes. Escaping prevents XSS by converting special characters to HTML entities, ensuring they display as text instead of being interpreted as code. Test with malicious input like &lt;script&gt;alert('XSS')&lt;/script&gt;.
+        </div>
+        <label for="inputText">Enter potentially malicious input:</label>
+        <textarea id="inputText" rows="4" placeholder="e.g., &lt;script&gt;alert('XSS')&lt;/script&gt; or Hello &lt;b&gt;World&lt;/b&gt;"></textarea>
+        <button onclick="escapeAndDemo()">Escape HTML</button>
+        <button onclick="clearForm()">Clear</button>
+        <div id="demoSection" style="display: none;">
+            <h3>Demo: Raw vs. Escaped (Safe for Insertion)</h3>
+            <p>Below shows what happens if inserted via innerHTML without/with escaping. The escaped version prevents XSS execution.</p>
+            <div class="demo-pair">
+                <div class="demo-box demo-raw">
+                    <strong>Raw (Dangerous - Could Execute XSS):</strong><br>
+                    <div id="rawInsertion"></div>
+                </div>
+                <div class="demo-box demo-escaped">
+                    <strong>Escaped (Safe - Displays as Text):</strong><br>
+                    <div id="escapedInsertion"></div>
+                </div>
+            </div>
+        </div>
+        <label for="output">Escaped Output (Safe Text):</label>
+        <div id="output" class="output">Escaped result will appear here...</div>
+    </div>
+    <script>
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'  
+            };
+            return text.replace(/[&<>"']/g, (match) => map[match]);
+        }
+        function escapeAndDemo() {
+            const input = document.getElementById('inputText').value;
+            const output = document.getElementById('output');
+            const rawInsertion = document.getElementById('rawInsertion');
+            const escapedInsertion = document.getElementById('escapedInsertion');
+            const demoSection = document.getElementById('demoSection');
+            if (!input.trim()) {
+                output.textContent = 'Please enter some text to escape.';
+                output.className = 'output danger';
+                demoSection.style.display = 'none';
+                return;
+            }
+            const escaped = escapeHtml(input);
+            output.textContent = escaped;
+            output.className = 'output success';
+            rawInsertion.innerHTML = input;  
+            escapedInsertion.innerHTML = escaped;  
+            demoSection.style.display = 'block';
+        }
+        function clearForm() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('output').textContent = 'Escaped result will appear here...';
+            document.getElementById('output').className = 'output';
+            document.getElementById('demoSection').style.display = 'none';
+            document.getElementById('rawInsertion').innerHTML = '';
+            document.getElementById('escapedInsertion').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

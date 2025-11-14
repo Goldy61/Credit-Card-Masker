@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SameSite Cookie Simulator</title>
+<style>
+  :root{
+    --bg:#f6f9fc; --card:#fff; --accent:#0b66c3; --ok:#1e7e34; --warn:#b08b00; --bad:#b00020;
+  }
+  body{font-family:Inter,Segoe UI,Arial,system-ui; background:var(--bg); margin:0; padding:28px; color:#0b1a2b;}
+  .wrap{max-width:920px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  h1{font-size:1.25rem;margin:0;color:var(--accent)}
+  p.lead{margin:0;color:#3b556f}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:18px}
+  .card{background:var(--card);padding:16px;border-radius:10px;box-shadow:0 8px 20px rgba(11,22,40,0.06)}
+  label{display:block;font-weight:600;margin-top:8px}
+  .select{width:100%;padding:8px;border-radius:6px;border:1px solid #d6dde6;box-sizing:border-box}
+  .scenario{margin-top:12px}
+  .scenario button{display:block;width:100%;padding:10px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+  .scenario button.ghost{background:#fff;color:var(--accent);border:1px solid #d6dde6}
+  .out{margin-top:12px;padding:12px;border-radius:8px;background:#f7fbff;border:1px solid #e6f0ff}
+  .row{display:flex;gap:8px}
+  .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#eef8ff;color:var(--accent);font-weight:700}
+  .ok{color:var(--ok);font-weight:700}
+  .bad{color:var(--bad);font-weight:700}
+  .warn{color:var(--warn);font-weight:700}
+  pre{background:#fff;padding:10px;border-radius:6px;border:1px solid #eef3ff;overflow:auto}
+  .hint{font-size:0.9rem;color:#51607a;margin-top:8px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>SameSite Cookie Rules — Simulator</h1>
+        <p class="lead">See whether a cookie would be sent for different request types under Strict / Lax / None.</p>
+      </div>
+      <div class="pill">Client-side demo</div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <label for="samesite">Choose SameSite value</label>
+        <select id="samesite" class="select" aria-label="SameSite">
+          <option value="Strict">Strict</option>
+          <option value="Lax" selected>Lax</option>
+          <option value="None">None</option>
+        </select>
+
+        <label for="secure" style="margin-top:12px;">Cookie Secure flag</label>
+        <div class="row">
+          <select id="secure" class="select" aria-label="Secure">
+            <option value="true" selected>Secure (https only)</option>
+            <option value="false">Not Secure</option>
+          </select>
+        </div>
+
+        <div class="hint">
+          Tip: Modern browsers require <code>SameSite=None</code> cookies to also have <code>Secure</code>.
+        </div>
+
+        <div class="scenario">
+          <label>Simulate scenarios</label>
+          <button id="simulate">Run simulation</button>
+        </div>
+
+        <div class="out" id="decisionBox" aria-live="polite">
+          <strong>Result</strong>
+          <div id="desc" style="margin-top:8px;">Choose a SameSite value and click <em>Run simulation</em>.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Scenarios explained</h3>
+        <ol style="margin:8px 0 0 18px;color:#344b62">
+          <li><strong>Cross-site top-level GET navigation</strong> — user clicks a link on <em>other-site.com</em> to navigate to <em>target-site.com</em>. (Safe GET navigation)</li>
+          <li><strong>Cross-site POST submission</strong> — a form on <em>other-site.com</em> POSTs to <em>target-site.com</em> (unsafe/side-effecting).</li>
+          <li><strong>Third-party subrequest</strong> — an image, iframe, or fetch from <em>other-site.com</em> included inside a page on a different origin (typical third-party context).</li>
+        </ol>
+
+        <div style="margin-top:12px">
+          <strong>Cookie header (simulated):</strong>
+          <pre id="cookieString">sessionid=abc123; SameSite=Lax; Secure</pre>
+        </div>
+
+        <div style="margin-top:12px">
+          <strong>Simulation output</strong>
+          <div id="tableOut" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+  function wouldSendCookie(sameSite, secureFlag, scenario) {
+    const result = { send: false, reason: '' };
+    if (sameSite === 'None' && !secureFlag) {
+      result.send = false;
+      result.reason = 'SameSite=None requires Secure; modern browsers will treat as rejected or not send.';
+      return result;
+    }
+    if (sameSite === 'Strict') {
+      if (scenario === 'top-get' || scenario === 'cross-post' || scenario === 'third-party') {
+        result.send = false;
+        result.reason = 'SameSite=Strict: cookie is NOT sent in cross-site context (most restrictive).';
+      }
+      return result;
+    }
+    if (sameSite === 'Lax') {
+      if (scenario === 'top-get') {
+        result.send = true;
+        result.reason = 'SameSite=Lax: cookie IS sent for top-level navigations via GET (e.g., user clicking a link).';
+      } else {
+        result.send = false;
+        result.reason = 'SameSite=Lax: cookie is NOT sent for cross-site POST or third-party subrequests.';
+      }
+      return result;
+    }
+    if (sameSite === 'None') {
+      // None: cookie sent in all contexts (if Secure requirement satisfied)
+      result.send = true;
+      result.reason = 'SameSite=None: cookie IS sent in all contexts (requires Secure).';
+      return result;
+    }
+    result.send = false;
+    result.reason = 'Unknown SameSite value';
+    return result;
+  }
+  function prettyYes(no) { return no ? '<span class="ok">YES</span>' : '<span class="bad">NO</span>'; }
+
+  document.getElementById('simulate').addEventListener('click', () => {
+    const sameSite = document.getElementById('samesite').value;
+    const secure = document.getElementById('secure').value === 'true';
+
+    const cookieParts = ['sessionid=abc123', `SameSite=${sameSite}`];
+    if (secure) cookieParts.push('Secure');
+    document.getElementById('cookieString').textContent = cookieParts.join('; ');
+
+    const scenarios = [
+      { id: 'top-get', label: 'Cross-site top-level GET navigation (user clicks link)' },
+      { id: 'cross-post', label: 'Cross-site POST form submission' },
+      { id: 'third-party', label: 'Third-party subrequest (iframe / image / fetch)' }
+    ];
+    let html = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid #eef3ff">Scenario</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eef3ff">Cookie Sent?</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eef3ff">Explanation</th></tr></thead><tbody>';
+    scenarios.forEach(s => {
+      const r = wouldSendCookie(sameSite, secure, s.id);
+      html += `<tr>
+        <td style="padding:8px;border-bottom:1px solid #f4f7fb">${s.label}</td>
+        <td style="padding:8px;border-bottom:1px solid #f4f7fb">${r.send ? '<span class="ok">YES</span>' : '<span class="bad">NO</span>'}</td>
+        <td style="padding:8px;border-bottom:1px solid #f4f7fb">${r.reason}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('tableOut').innerHTML = html;
+    const desc = document.getElementById('desc');
+    desc.innerHTML = `<strong>Policy:</strong> SameSite=${sameSite}${secure ? ' (Secure=yes)' : ''}`;
+  });
+  document.getElementById('simulate').click();
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SQL Injection Detector</title>
+<style>
+  :root{--bg:#f6f8fb;--card:#fff;--accent:#c62828;--ok:#2e7d32}
+  body{font-family:Inter,Segoe UI,Arial;margin:0;background:var(--bg);padding:28px;display:flex;justify-content:center}
+  .card{width:720px;background:var(--card);padding:20px;border-radius:10px;box-shadow:0 8px 24px rgba(12,20,30,0.08)}
+  h1{margin:0 0 6px;font-size:20px}
+  p.muted{color:#556;margin-top:0;margin-bottom:12px}
+  textarea{width:100%;min-height:110px;padding:10px;border-radius:8px;border:1px solid #d6dde6;box-sizing:border-box;font-family:monospace}
+  .controls{display:flex;gap:8px;margin-top:10px}
+  button{background:#0b66c3;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+  button.ghost{background:#fff;color:#0b66c3;border:1px solid #cfe0fb}
+  .result{margin-top:14px;padding:12px;border-radius:8px}
+  .unsafe{background:#fff0f0;color:var(--accent);border:1px solid #f4c2c2}
+  .safe{background:#f0fff6;color:var(--ok);border:1px solid #bfe6c7}
+  .matches{margin-top:8px;font-family:monospace}
+  .highlight{background:yellow;border-radius:3px;padding:0 2px}
+  .small{font-size:0.9rem;color:#555}
+  .examples{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:#eef3ff;padding:6px 10px;border-radius:999px;cursor:pointer;border:1px solid #dde9ff;color:#0b66c3}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>SQL Injection Detector</h1>
+    <p class="muted">Paste input (user-supplied text, query, or form value).
+       The tool detects common SQL injection keywords/patterns.</p>
+
+    <label class="small">Input to scan</label>
+    <textarea id="inputText" placeholder="e.g. ' OR 1=1 -- or SELECT * FROM users; DROP TABLE users;"></textarea>
+
+    <div class="controls">
+      <button id="scanBtn">Scan for SQL keywords</button>
+      <button id="clearBtn" class="ghost">Clear</button>
+    </div>
+
+    <div id="resultArea" class="result safe" style="display:none;"></div>
+
+    <div id="matches" class="matches"></div>
+
+    <div style="margin-top:12px" class="small">Quick examples:</div>
+    <div class="examples">
+      <div class="chip" data-example="'; DROP TABLE users; --">'; DROP TABLE users; --</div>
+      <div class="chip" data-example="admin' OR '1'='1">admin' OR '1'='1</div>
+      <div class="chip" data-example="SELECT username, password FROM users">SELECT ...</div>
+      <div class="chip" data-example="normal input (safe)">normal input (safe)</div>
+    </div>
+  </div>
+
+<script>
+const PATTERNS = [
+  {name: 'OR 1=1', regex: /or\s+1\s*=\s*1/i},
+  {name: 'UNION', regex: /\bunion\b/i},
+  {name: 'SELECT', regex: /\bselect\b/i},
+  {name: 'INSERT', regex: /\binsert\b/i},
+  {name: 'UPDATE', regex: /\bupdate\b/i},
+  {name: 'DELETE', regex: /\bdelete\b/i},
+  {name: 'DROP', regex: /\bdrop\b/i},
+  {name: 'TRUNCATE', regex: /\btruncate\b/i},
+  {name: 'EXEC/EXECUTE', regex: /\b(exec|execute)\b/i},
+  {name: '-- (comment)', regex: /--/},
+  {name: ';--', regex: /;--/},
+  {name: 'UNION SELECT', regex: /\bunion\b\s+\bselect\b/i},
+  {name: 'INFORMATION_SCHEMA', regex: /\binformation_schema\b/i},
+  {name: 'OR TRUE', regex: /\bor\s+true\b/i},
+  {name: 'SLEEP', regex: /\bsleep\s*\(/i},
+  {name: '; (statement separator)', regex: /;/}
+];
+
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function detectSqlPatterns(input){
+  const matches = [];
+  const lowered = input; 
+  PATTERNS.forEach(p => {
+    const m = p.regex.exec(input);
+    if(m) {
+      matches.push({name: p.name, match: m[0], index: m.index});
+    }
+  });
+  return matches;
+}
+function highlightMatches(input, matches){
+  if(!matches || matches.length===0) return escapeHtml(input);
+  matches.sort((a,b)=>a.index - b.index);
+  let out = '';
+  let pos = 0;
+  for(const m of matches){
+    if(m.index < 0) continue;
+    const start = Math.max(0, m.index);
+    if(start > pos){
+      out += escapeHtml(input.slice(pos, start));
+    }
+    const matchedText = input.substr(m.index, m.match.length);
+    out += '<span class="highlight">' + escapeHtml(matchedText) + '</span>';
+    pos = m.index + m.match.length;
+  }
+  if(pos < input.length) out += escapeHtml(input.slice(pos));
+  return out || escapeHtml(input);
+}
+const inputEl = document.getElementById('inputText');
+const scanBtn = document.getElementById('scanBtn');
+const clearBtn = document.getElementById('clearBtn');
+const resultArea = document.getElementById('resultArea');
+const matchesDiv = document.getElementById('matches');
+
+scanBtn.addEventListener('click', () => {
+  const text = inputEl.value || '';
+  matchesDiv.innerHTML = '';
+  if(!text.trim()){
+    resultArea.style.display = 'block';
+    resultArea.className = 'result safe';
+    resultArea.textContent = 'Enter input to scan for SQL injection patterns.';
+    return;
+  }
+  const found = detectSqlPatterns(text);
+  if(found.length === 0){
+    resultArea.style.display = 'block';
+    resultArea.className = 'result safe';
+    resultArea.textContent = '✅ No common SQL injection keywords or patterns detected.';
+    matchesDiv.innerHTML = '<div class="small">No matches.</div>';
+  } else {
+    resultArea.style.display = 'block';
+    resultArea.className = 'result unsafe';
+    resultArea.textContent = '⚠️ Potential SQL injection patterns detected:';
+    matchesDiv.innerHTML = '<div class="small"><strong>Matches:</strong> ' + found.map(f=>escapeHtml(f.name + ' → "' + f.match + '"')).join(', ') + '</div>';
+    const allMatches = [];
+    PATTERNS.forEach(p=>{
+      const g = new RegExp(p.regex.source, 'ig');
+      let mm;
+      while((mm = g.exec(text)) !== null){
+        allMatches.push({name:p.name, match:mm[0], index:mm.index});
+        if(g.lastIndex === mm.index) g.lastIndex++;
+      }
+    });
+    matchesDiv.innerHTML += '<div style="margin-top:10px;padding:10px;background:#fff;border-radius:6px;border:1px solid #eef3ff">' + highlightMatches(text, allMatches) + '</div>';
+  }
+});
+clearBtn.addEventListener('click', () => {
+  inputEl.value = '';
+  resultArea.style.display = 'none';
+  matchesDiv.innerHTML = '';
+});
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click', ()=> {
+    inputEl.value = c.dataset.example;
+  });
+});
+</script>
+</body>
+</html>

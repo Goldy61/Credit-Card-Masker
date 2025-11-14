@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role-Based Access Control (RBAC) Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 15px;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .admin-only {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+        .admin-only.hidden {
+            display: none;
+        }
+        .user-only {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #155724;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            color: #155724;
+            margin-bottom: 15px;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            color: #721c24;
+            margin-bottom: 15px;
+        }
+        .hidden {
+            display: none;
+        }
+        #status {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .role-indicator {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .role-user {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        .role-admin {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        #dashboard {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Role-Based Access Control (RBAC) Simulation</h1>
+    <div class="container">
+        <div class="warning">
+            <strong>Warning:</strong> This is a client-side demo for educational purposes only. RBAC simulates access control where roles (e.g., "user", "admin") determine permissions. Only "admin" can access privileged functions. This is easily bypassed (e.g., inspect elements or edit JS). In production, implement server-side RBAC with secure auth (e.g., JWT roles). Demo credentials: Username "admin"/Password "admin" for admin role; "user"/"user" for user role.
+        </div>
+        <div id="loginForm">
+            <h2>Login to Set Role</h2>
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter username (e.g., admin or user)">
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter password (e.g., admin or user)">
+            <button onclick="login()">Login</button>
+            <button onclick="resetDemo()">Reset Demo</button>
+        </div>
+        <div id="dashboard" class="hidden">
+            <div id="roleIndicator" class="role-indicator"></div>
+            <div class="user-only">
+                <h3>Available to All Users</h3>
+                <p>This section is visible to both users and admins.</p>
+                <button onclick="userFunction()">View Profile</button>
+                <button onclick="userFunction()">Browse Content</button>
+            </div>
+            <div id="adminPanel" class="admin-only hidden">
+                <h3>Admin Panel (Admin Role Only)</h3>
+                <p>This privileged section is hidden from regular users. Only admins can access these functions.</p>
+                <button onclick="adminFunction('delete')">Delete Users</button>
+                <button onclick="adminFunction('manage')">Manage Settings</button>
+                <button onclick="adminFunction('view')">View Logs</button>
+            </div>
+            <button onclick="logout()">Logout</button>
+        </div>
+        <div id="status" class="hidden"></div>
+    </div>
+    <script>
+        const ROLES = {
+            USER: 'user',
+            ADMIN: 'admin'
+        };
+        const VALID_CREDENTIALS = {
+            'user': { password: 'user', role: ROLES.USER },
+            'admin': { password: 'admin', role: ROLES.ADMIN }
+        };
+        const USER_ROLE_KEY = 'demoUser Role';
+        const CURRENT_USER_KEY = 'demoCurrentUser ';
+        function isAdmin() {
+            const role = localStorage.getItem(USER_ROLE_KEY);
+            return role === ROLES.ADMIN;
+        }
+        function setUser Role(username, role) {
+            localStorage.setItem(CURRENT_USER_KEY, username);
+            localStorage.setItem(USER_ROLE_KEY, role);
+        }
+        function clearUser Session() {
+            localStorage.removeItem(CURRENT_USER_KEY);
+            localStorage.removeItem(USER_ROLE_KEY);
+        }
+        function updateUIBasedOnRole() {
+            const dashboard = document.getElementById('dashboard');
+            const adminPanel = document.getElementById('adminPanel');
+            const roleIndicator = document.getElementById('roleIndicator');
+            const loginForm = document.getElementById('loginForm');
+            const role = localStorage.getItem(USER_ROLE_KEY);
+            const username = localStorage.getItem(CURRENT_USER_KEY);
+            if (role && username) {
+                loginForm.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+                roleIndicator.textContent = `Logged in as: ${username} (Role: ${role.toUpperCase()})`;
+                roleIndicator.className = `role-indicator role-${role}`;
+                if (isAdmin()) {
+                    adminPanel.classList.remove('hidden');
+                } else {
+                    adminPanel.classList.add('hidden');
+                }
+            } else {
+                loginForm.classList.remove('hidden');
+                dashboard.classList.add('hidden');
+            }
+        }
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+            status.classList.remove('hidden');
+            setTimeout(() => status.classList.add('hidden'), 3000);
+        }
+        function showError(message) {
+            showStatus(message, 'error');
+        }
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            if (!username || !password) {
+                showError('Please enter both username and password.');
+                return;
+            }
+            const creds = VALID_CREDENTIALS[username];
+            if (creds && creds.password === password) {
+                setUser Role(username, creds.role);
+                showStatus(`Login successful! Role: ${creds.role.toUpperCase()}.`);
+                updateUIBasedOnRole();
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+            } else {
+                showError('Invalid username or password.');
+            }
+        }
+        function userFunction(action) {
+            showStatus(`User  action performed: ${action || 'General'}. All roles can do this.`);
+            console.log(`User  function: ${action}`);
+        }
+        function adminFunction(action) {
+            if (!isAdmin()) {
+                showError('Access denied! Admin role required.');
+                return;
+            }
+            showStatus(`Admin action performed: ${action}. Restricted to admins only.`);
+            console.log(`Admin function: ${action}`);
+        }
+        function logout() {
+            clearUser Session();
+            showStatus('Logged out successfully.');
+            updateUIBasedOnRole();
+        }
+        function resetDemo() {
+            clearUser Session();
+            location.reload();
+        }
+        window.onload = function() {
+            updateUIBasedOnRole();
+        };
+    </script>
+</body>
+</html>

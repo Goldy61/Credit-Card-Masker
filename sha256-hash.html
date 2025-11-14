@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHA-256 Hash Generator</title>
+<style>
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background-color: #f4f7fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .container {
+    background: #fff;
+    padding: 30px 40px;
+    border-radius: 10px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.2);
+    width: 450px;
+  }
+  h2 {
+    text-align: center;
+    color: #0078d7;
+  }
+  label {
+    font-weight: 600;
+    display: block;
+    margin-top: 15px;
+  }
+  input, textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 6px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+  button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 20px;
+    background: #0078d7;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #005ea8;
+  }
+  .result {
+    background: #f0f3f7;
+    border-radius: 5px;
+    padding: 10px;
+    word-wrap: break-word;
+    font-family: monospace;
+    margin-top: 15px;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h2>SHA-256 Hash Generator</h2>
+    <label for="textInput">Enter any text:</label>
+    <textarea id="textInput" rows="4" placeholder="Type text to hash..."></textarea>
+    <button id="hashBtn">Generate SHA-256 Hash</button>
+    <div class="result" id="hashResult">Your hash will appear here...</div>
+  </div>
+<script>
+  function bufferToHex(buffer) {
+    const bytes = new Uint8Array(buffer);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  async function sha256Hash(message) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return bufferToHex(hashBuffer);
+  }
+  document.getElementById('hashBtn').addEventListener('click', async () => {
+    const text = document.getElementById('textInput').value.trim();
+    const resultDiv = document.getElementById('hashResult');
+    if (!text) {
+      resultDiv.textContent = "⚠️ Please enter some text first!";
+      resultDiv.style.color = "red";
+      return;
+    }
+    resultDiv.style.color = "black";
+    resultDiv.textContent = "⏳ Generating hash...";
+    const hash = await sha256Hash(text);
+    resultDiv.textContent = hash;
+  });
+</script>
+</body>
+</html>

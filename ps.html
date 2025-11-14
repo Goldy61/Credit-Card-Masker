@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Form Validation</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f5f7fa;
+    margin: 0;
+    padding: 40px;
+  }
+
+  .container {
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 700px;
+    margin: auto;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+  }
+
+  h2 {
+    text-align: center;
+    color: #0078d7;
+  }
+
+  label {
+    display: block;
+    margin-top: 15px;
+    font-weight: 600;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+
+  textarea {
+    resize: none;
+  }
+
+  .error {
+    color: red;
+    font-size: 0.9em;
+  }
+
+  button {
+    margin-top: 20px;
+    padding: 12px;
+    width: 100%;
+    background-color: #0078d7;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #0056a3;
+  }
+
+  #salaryValue {
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h2>Job Application Form</h2>
+
+    <form id="userForm" novalidate>
+      <label>Username</label>
+      <input type="text" id="username" placeholder="Enter username">
+      <div class="error" id="err-username"></div>
+
+      <label>Website URL</label>
+      <input type="url" id="website" placeholder="https://example.com">
+      <div class="error" id="err-website"></div>
+
+      <label>Pincode / Zip Code</label>
+      <input type="number" id="pincode" placeholder="6-digit code">
+      <div class="error" id="err-pincode"></div>
+
+      <label>Bio / About (Optional, max 250 chars)</label>
+      <textarea id="bio" rows="4" maxlength="250" placeholder="Tell us about yourself..."></textarea>
+      <div class="error" id="err-bio"></div>
+
+      <label>Salary Expectation (₹20,000 - ₹2,00,000)</label>
+      <input type="range" id="salary" min="20000" max="200000" step="1000" value="50000">
+      <div>Selected: ₹<span id="salaryValue">50000</span></div>
+      <div class="error" id="err-salary"></div>
+
+      <label>Preferred Contact Time</label>
+      <input type="time" id="time">
+      <div class="error" id="err-time"></div>
+
+      <label>Resume Upload (PDF/DOCX, max 5MB)</label>
+      <input type="file" id="resume" accept=".pdf,.doc,.docx">
+      <div class="error" id="err-resume"></div>
+
+      <label>Programming Languages (select at least 2)</label>
+      <select id="languages" multiple size="5">
+        <option>JavaScript</option>
+        <option>Python</option>
+        <option>Java</option>
+        <option>C#</option>
+        <option>C++</option>
+        <option>Go</option>
+      </select>
+      <div class="error" id="err-languages"></div>
+
+      <label>Employee ID (Format: EMP-XXXX)</label>
+      <input type="text" id="empid" placeholder="EMP-1234">
+      <div class="error" id="err-empid"></div>
+
+      <label>Referral Code (Optional, [A-Z0-9]{6})</label>
+      <input type="text" id="refcode" placeholder="e.g. ABC123">
+      <div class="error" id="err-refcode"></div>
+
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+
+  <script>
+    
+    const salaryInput = document.getElementById('salary');
+    const salaryValue = document.getElementById('salaryValue');
+    salaryInput.addEventListener('input', () => {
+      salaryValue.textContent = salaryInput.value;
+    });
+
+    document.getElementById('userForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      document.querySelectorAll('.error').forEach(el => el.textContent = '');
+
+      let valid = true;
+
+      const username = document.getElementById('username').value.trim();
+      const website = document.getElementById('website').value.trim();
+      const pincode = document.getElementById('pincode').value.trim();
+      const bio = document.getElementById('bio').value.trim();
+      const salary = parseInt(document.getElementById('salary').value);
+      const time = document.getElementById('time').value;
+      const resume = document.getElementById('resume').files[0];
+      const langs = Array.from(document.getElementById('languages').selectedOptions).map(o => o.value);
+      const empid = document.getElementById('empid').value.trim();
+      const ref = document.getElementById('refcode').value.trim();
+
+      if (!/^[A-Za-z0-9]{4,}$/.test(username)) {
+        document.getElementById('err-username').textContent = 'Username must be alphanumeric, no spaces, min 4 chars.';
+        valid = false;
+      }
+      try {
+        new URL(website);
+      } catch {
+        document.getElementById('err-website').textContent = 'Enter a valid URL.';
+        valid = false;
+      }
+      if (!/^\d{6}$/.test(pincode)) {
+        document.getElementById('err-pincode').textContent = 'Pincode must be exactly 6 digits.';
+        valid = false;
+      }
+      if (bio.length > 250) {
+        document.getElementById('err-bio').textContent = 'Bio cannot exceed 250 characters.';
+        valid = false;
+      }
+      if (salary < 20000 || salary > 200000) {
+        document.getElementById('err-salary').textContent = 'Salary must be between 20,000 and 2,00,000.';
+        valid = false;
+      }
+      if (!time) {
+        document.getElementById('err-time').textContent = 'Please select a contact time.';
+        valid = false;
+      } else {
+        const [h, m] = time.split(':').map(Number);
+        const mins = h * 60 + m;
+        if (mins < 540 || mins > 1080) { // 9:00 - 18:00
+          document.getElementById('err-time').textContent = 'Contact time must be between 09:00 and 18:00.';
+          valid = false;
+        }
+      }
+      if (!resume) {
+        document.getElementById('err-resume').textContent = 'Resume file is required.';
+        valid = false;
+      } else {
+        const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!allowed.includes(resume.type)) {
+          document.getElementById('err-resume').textContent = 'Only PDF or DOCX files are allowed.';
+          valid = false;
+        }
+        if (resume.size > 5 * 1024 * 1024) {
+          document.getElementById('err-resume').textContent = 'File size must not exceed 5MB.';
+          valid = false;
+        }
+      }
+      if (langs.length < 2) {
+        document.getElementById('err-languages').textContent = 'Please select at least 2 programming languages.';
+        valid = false;
+      }
+      if (!/^EMP-\d{4}$/.test(empid)) {
+        document.getElementById('err-empid').textContent = 'Employee ID must follow pattern EMP-XXXX.';
+        valid = false;
+      }
+      if (ref && !/^[A-Z0-9]{6}$/.test(ref)) {
+        document.getElementById('err-refcode').textContent = 'Referral Code must match pattern [A-Z0-9]{6}.';
+        valid = false;
+      }
+      if (valid) {
+        alert('✅ Form submitted successfully!');
+        this.reset();
+        salaryValue.textContent = '50000';
+      }
+    });
+  </script>
+</body>
+</html>

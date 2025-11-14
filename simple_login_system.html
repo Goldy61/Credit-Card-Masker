@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Client-Only Login System (Hashed Credentials in localStorage)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .form-section {
+            margin-bottom: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            color: #155724;
+            margin-bottom: 15px;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            color: #721c24;
+            margin-bottom: 15px;
+        }
+        #loginStatus {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .logged-in {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .logged-out {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Client-Only Login System</h1>
+    <div class="container">
+        <div class="warning">
+            <strong>Warning:</strong> This is a client-side demo for educational purposes only.
+             Credentials are hashed (simple non-crypto hash) and stored in localStorage, 
+             which is easily accessible and insecure (users can inspect/edit storage). 
+             Not suitable for real applications—use server-side auth with secure hashing 
+             (e.g., bcrypt) and HTTPS. Data persists until cleared (e.g., via browser settings).
+        </div>
+        <div id="registerSection" class="form-section">
+            <h2>Register New User</h2>
+            <label for="regUsername">Username:</label>
+            <input type="text" id="regUsername" placeholder="Enter a unique username">
+            <label for="regPassword">Password:</label>
+            <input type="password" id="regPassword" placeholder="Enter a password">
+            <button onclick="registerUser ()">Register</button>
+            <button onclick="showLogin()">Already have an account? Login</button>
+        </div>
+        <div id="loginSection" class="form-section hidden">
+            <h2>Login</h2>
+            <label for="loginUsername">Username:</label>
+            <input type="text" id="loginUsername" placeholder="Enter your username">
+            <label for="loginPassword">Password:</label>
+            <input type="password" id="loginPassword" placeholder="Enter your password">
+            <button onclick="loginUser ()">Login</button>
+            <button onclick="showRegister()">Don't have an account? Register</button>
+        </div>
+        <div id="loggedInSection" class="form-section hidden">
+            <h2>Welcome!</h2>
+            <p>You are now logged in. In a real app, this could show protected content.</p>
+            <button onclick="logoutUser ()">Logout</button>
+        </div>
+        <div id="loginStatus" class="logged-out">No user logged in.</div>
+    </div>
+    <script>
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return Math.abs(hash).toString(36); // Base-36 for shorter string
+        }
+        const USERS_KEY = 'demoUsers';
+        function loadUsers() {
+            const stored = localStorage.getItem(USERS_KEY);
+            return stored ? JSON.parse(stored) : {};
+        }
+        function saveUsers(users) {
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        }
+        function showRegister() {
+            document.getElementById('registerSection').classList.remove('hidden');
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('loggedInSection').classList.add('hidden');
+            clearForms();
+            updateStatus('logged-out', 'No user logged in.');
+        }
+        function showLogin() {
+            document.getElementById('registerSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('loggedInSection').classList.add('hidden');
+            clearForms();
+            updateStatus('logged-out', 'No user logged in.');
+        }
+        function registerUser () {
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const status = document.getElementById('loginStatus');
+            if (!username || !password) {
+                showError('Please enter both username and password.');
+                return;
+            }
+            if (username.length < 3) {
+                showError('Username must be at least 3 characters long.');
+                return;
+            }
+            const users = loadUsers();
+            if (users[username]) {
+                showError('Username already exists. Please choose another.');
+                return;
+            }
+            const hashedPassword = simpleHash(password);
+            users[username] = hashedPassword;
+            saveUsers(users);
+
+            showSuccess('Registration successful! You can now login.');
+            clearForms();
+            showLogin(); // Switch to login after registration
+        }
+        function loginUser () {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const status = document.getElementById('loginStatus');
+
+            if (!username || !password) {
+                showError('Please enter both username and password.');
+                return;
+            }
+            const users = loadUsers();
+            const hashedPassword = simpleHash(password);
+            if (users[username] && users[username] === hashedPassword) {
+                localStorage.setItem('currentUser ', username);
+                showSuccess(`Welcome, ${username}! You are now logged in.`);
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('loggedInSection').classList.remove('hidden');
+                clearForms();
+            } else {
+                showError('Invalid username or password.');
+                clearForms();
+            }
+        }
+        function logoutUser () {
+            localStorage.removeItem('currentUser ');
+            showRegister(); // Or show login; here we show register for new users
+            updateStatus('logged-out', 'Logged out successfully.');
+        }
+        function showSuccess(message) {
+            const status = document.getElementById('loginStatus');
+            status.textContent = message;
+            status.className = 'success';
+        }
+        function showError(message) {
+            const status = document.getElementById('loginStatus');
+            status.textContent = message;
+            status.className = 'error';
+        }
+        function updateStatus(className, message) {
+            const status = document.getElementById('loginStatus');
+            status.textContent = message;
+            status.className = className;
+        }
+        function clearForms() {
+            document.getElementById('regUsername').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+        window.onload = function() {
+            const currentUser  = localStorage.getItem('currentUser ');
+            const users = loadUsers();
+            if (currentUser  && users[currentUser ]) {
+                showSuccess(`Welcome back, ${currentUser }! You are logged in.`);
+                document.getElementById('registerSection').classList.add('hidden');
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('loggedInSection').classList.remove('hidden');
+            } else {
+                if (Object.keys(users).length === 0) {
+                    showRegister();
+                } else {
+                    showLogin();
+                }
+                localStorage.removeItem('currentUser '); // Ensure clean state
+            }
+        };
+    </script>
+</body>
+</html>

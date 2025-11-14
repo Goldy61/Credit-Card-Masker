@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Registration Form - Validation</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width:900px; margin:20px auto; }
+    label { display:block; margin-top:12px; }
+    input, select, textarea { width:100%; padding:8px; box-sizing:border-box; }
+    .error { color:#b00; font-size:0.9em; }
+    .hint { font-size:0.85em; color:#666; }
+    .row { display:flex; gap:12px; }
+    .row > * { flex:1; }
+  </style>
+</head>
+<body>
+  <h2>Job Registration Form</h2>
+
+  <form id="regForm" novalidate>
+    <label>
+      Full Name
+      <input id="name" required minlength="3" />
+      <div class="error" id="err-name"></div>
+    </label>
+
+    <label>
+      Email
+      <input id="email" type="email" required />
+      <div class="error" id="err-email"></div>
+    </label>
+
+    <label>
+      Phone
+      <input id="phone" required pattern="^\d{10}$" placeholder="10 digits" />
+      <div class="error" id="err-phone"></div>
+    </label>
+
+    <label>
+      Salary Expectation
+      <input id="salary" type="range" min="220000" max="2000000" step="1000" value="300000" />
+      <div class="hint">Selected: <span id="salaryVal">300000</span></div>
+    </label>
+
+    <label>
+      Preferred Contact Time
+      <input id="time" type="time" required />
+      <div class="error" id="err-time"></div>
+    </label>
+
+    <label>
+      Resume (PDF or DOCX, max 5MB)
+      <input id="resume" type="file" accept=".pdf,.docx" required />
+      <div class="error" id="err-resume"></div>
+    </label>
+
+    <label>
+      Programming Languages (choose at least 2)
+      <select id="langs" multiple size="5">
+        <option>JavaScript</option>
+        <option>Python</option>
+        <option>Java</option>
+        <option>C#</option>
+        <option>Go</option>
+        <option>Rust</option>
+      </select>
+      <div class="error" id="err-langs"></div>
+    </label>
+
+    <label>
+      Employee ID (pattern: EMP-XXXxX where X are digits)
+      <input id="empid" required placeholder="EMP-12345" />
+      <div class="error" id="err-empid"></div>
+    </label>
+
+    <label>
+      Referral Code (optional, if present must match [A-Z0-9]{6})
+      <input id="refcode" placeholder="Optional" />
+      <div class="error" id="err-refcode"></div>
+    </label>
+
+    <button type="submit">Submit</button>
+    <div id="formMsg" class="hint"></div>
+  </form>
+
+  <script>
+  function setErr(id, msg) { document.getElementById('err-' + id).textContent = msg || ''; }
+  function sanitizeFileName(name){
+    
+    return name.replace(/^.*[\\/]/, '').replace(/[^\w.\-() ]+/g, '');
+  }
+  const salary = document.getElementById('salary');
+  const salaryVal = document.getElementById('salaryVal');
+  salaryVal.textContent = salary.value;
+  salary.addEventListener('input', () => salaryVal.textContent = salary.value);
+
+  document.getElementById('regForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    ['name','email','phone','time','resume','langs','empid','refcode'].forEach(id => setErr(id,'')); 
+    document.getElementById('formMsg').textContent = '';
+    let ok = true;
+    const name = document.getElementById('name').value.trim();
+    if (name.length < 3) { setErr('name','Name must be at least 3 characters.'); ok = false; }
+    const email = document.getElementById('email').value.trim();
+    if (!email) { setErr('email','Email required.'); ok = false; }
+    else {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!re.test(email)) { setErr('email','Invalid email format.'); ok = false; }
+    }
+    const phone = document.getElementById('phone').value.trim();
+    if (!/^\d{10}$/.test(phone)) { setErr('phone','Phone must be 10 digits.'); ok = false; }
+    const time = document.getElementById('time').value;
+    if (!time) { setErr('time','Preferred contact time required.'); ok = false; }
+    else {
+      const [h,m] = time.split(':').map(Number);
+      const minutes = h*60 + m;
+      if (minutes < 9*60 || minutes > 18*60) { setErr('time','Time must be between 09:00 and 18:00.'); ok = false; }
+    }
+    const resumeInput = document.getElementById('resume');
+    const file = resumeInput.files[0];
+    if (!file) { setErr('resume','Resume required.'); ok = false; }
+    else {
+      const allowed = ['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/msword'];
+      if (!allowed.includes(file.type) && !(/\.docx?$/i.test(file.name))) {
+        setErr('resume','Resume must be PDF or DOCX.'); ok = false;
+      }
+      if (file.size > 5*1024*1024) { setErr('resume','Max size 5MB.'); ok = false; }
+    }
+    const langs = Array.from(document.getElementById('langs').selectedOptions).map(o => o.value);
+    if (langs.length < 2) { setErr('langs','Select at least 2 programming languages.'); ok = false; }
+    const empid = document.getElementById('empid').value.trim();
+    if (!/^EMP-\d{5}$/.test(empid)) { setErr('empid','Employee ID must be EMP-XXXXX where X are digits.'); ok = false; }
+    const ref = document.getElementById('refcode').value.trim();
+    if (ref && !/^[A-Z0-9]{6}$/.test(ref)) { setErr('refcode','Referral code must be 6 uppercase letters/digits.'); ok = false; }
+    const salaryValNum = Number(document.getElementById('salary').value);
+    if (salaryValNum < 220000) { setErr('salary','Salary must be at least 220,000.'); ok = false; }
+    if (!ok) {
+      document.getElementById('formMsg').textContent = 'Fix errors before submitting.';
+      return;
+    }
+    document.getElementById('formMsg').textContent = 'Form validated — ready to submit (client-only demo).';
+    if (file) {
+      const safeName = sanitizeFileName(file.name);
+      console.log('Sanitized resume filename:', safeName);
+    }
+  });
+  </script>
+</body>
+</html>

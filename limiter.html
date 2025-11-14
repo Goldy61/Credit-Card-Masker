@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Limiter Demo: Block After 5 Failed Attempts in 1 Minute</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 15px;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            color: #155724;
+            margin-bottom: 15px;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            color: #721c24;
+            margin-bottom: 15px;
+        }
+        .rate-limit {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        #status {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .logged-in {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .hidden {
+            display: none;
+        }
+        #attemptsInfo {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rate Limiter Demo: Block After 5 Failed Attempts in 1 Minute</h1>
+    <div class="container">
+        <div class="warning">
+            <strong>Warning:</strong> This is a client-side demo for educational purposes only. The rate limiter tracks failed login attempts using localStorage. After 5 failures within 60 seconds, it blocks further attempts for 60 seconds. This is easily bypassed (e.g., clear storage or incognito mode). In production, implement server-side rate limiting (e.g., with Redis) for real security. Demo credentials: Username "admin", Password "pass123".
+        </div>
+
+        <div id="loginForm">
+            <h2>Login</h2>
+            <div id="attemptsInfo">Failed attempts in last minute: 0/5</div>
+
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter username (e.g., admin)" value="admin">
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter password (e.g., pass123)">
+
+            <button id="loginBtn" onclick="attemptLogin()">Login</button>
+            <button onclick="resetDemo()">Reset Demo (Clear Storage)</button>
+        </div>
+        <div id="loggedInSection" class="hidden">
+            <h2>Welcome!</h2>
+            <p id="welcomeMsg">You are now logged in successfully.</p>
+            <button onclick="logout()">Logout</button>
+        </div>
+        <div id="status" class="error hidden"></div>
+    </div>
+    <script>
+        const MAX_ATTEMPTS = 5;
+        const TIME_WINDOW = 60 * 1000; // 1 minute in ms
+        const BLOCK_DURATION = 60 * 1000; // 1 minute block time
+        const ATTEMPTS_KEY = 'rateLimitAttempts';
+        const BLOCKED_KEY = 'rateLimitBlockedUntil';
+        const VALID_USER = 'admin';
+        const VALID_PASS = 'pass123';
+        function loadAttempts() {
+            const stored = localStorage.getItem(ATTEMPTS_KEY);
+            return stored ? JSON.parse(stored) : [];
+        }
+        function saveAttempts(attempts) {
+            localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(attempts));
+        }
+        function isBlocked() {
+            const blockedUntil = localStorage.getItem(BLOCKED_KEY);
+            if (!blockedUntil) return false;
+            const now = Date.now();
+            if (now < parseInt(blockedUntil)) {
+                return true;
+            } else {
+                localStorage.removeItem(BLOCKED_KEY);
+                return false;
+            }
+        }
+        function getRecentFailures() {
+            const attempts = loadAttempts();
+            const now = Date.now();
+            const recent = attempts.filter(ts => now - ts < TIME_WINDOW);
+            return recent.length;
+        }
+        function addFailedAttempt() {
+            const attempts = loadAttempts();
+            attempts.push(Date.now());
+            const now = Date.now();
+            const recentAttempts = attempts.filter(ts => now - ts < TIME_WINDOW * 2); // Prune old ones
+            saveAttempts(recentAttempts);
+        }
+        function blockUser () {
+            localStorage.setItem(BLOCKED_KEY, (Date.now() + BLOCK_DURATION).toString());
+        }
+        function updateRateLimitUI() {
+            const attemptsInfo = document.getElementById('attemptsInfo');
+            const recent = getRecentFailures();
+            attemptsInfo.textContent = `Failed attempts in last minute: ${recent}/${MAX_ATTEMPTS}`;
+            const loginBtn = document.getElementById('loginBtn');
+            const status = document.getElementById('status');
+            if (isBlocked()) {
+                const blockedUntil = parseInt(localStorage.getItem(BLOCKED_KEY));
+                const timeLeft = Math.ceil((blockedUntil - Date.now()) / 1000);
+                loginBtn.disabled = true;
+                status.textContent = `Rate limited! Too many failed attempts. Try again in ${timeLeft} seconds.`;
+                status.className = 'rate-limit';
+                status.classList.remove('hidden');
+                const timer = setInterval(() => {
+                    const newTimeLeft = Math.ceil((blockedUntil - Date.now()) / 1000);
+                    if (newTimeLeft > 0) {
+                        status.textContent = `Rate limited! Too many failed attempts. Try again in ${newTimeLeft} seconds.`;
+                    } else {
+                        clearInterval(timer);
+                        status.classList.add('hidden');
+                        loginBtn.disabled = false;
+                        updateRateLimitUI(); // Refresh
+                    }
+                }, 1000);
+            } else if (getRecentFailures() >= MAX_ATTEMPTS) {
+                blockUser ();
+                updateRateLimitUI();
+            } else {
+                loginBtn.disabled = false;
+                status.classList.add('hidden');
+            }
+        }
+        function showError(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'error';
+            status.classList.remove('hidden');
+            setTimeout(() => status.classList.add('hidden'), 5000);
+        }
+        function showSuccess(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'success';
+            status.classList.remove('hidden');
+            setTimeout(() => status.classList.add('hidden'), 3000);
+        }
+        function attemptLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showError('Please enter both username and password.');
+                return;
+            }
+            if (isBlocked()) {
+                updateRateLimitUI(); // Refresh timer
+                return;
+            }
+            if (username === VALID_USER && password === VALID_PASS) {
+                localStorage.removeItem(ATTEMPTS_KEY);
+                localStorage.removeItem(BLOCKED_KEY);
+                localStorage.setItem('loggedIn', 'true'); // Simple session
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('loggedInSection').classList.remove('hidden');
+                document.getElementById('welcomeMsg').textContent = `Welcome, ${username}! Login successful.`;
+                updateRateLimitUI(); // Reset display
+            } else {
+                addFailedAttempt();
+                showError('Invalid username or password.');
+                updateRateLimitUI();
+            }
+        }
+        function logout() {
+            localStorage.removeItem('loggedIn');
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('loggedInSection').classList.add('hidden');
+            document.getElementById('username').value = VALID_USER; // Pre-fill for demo
+            document.getElementById('password').value = '';
+            updateRateLimitUI();
+        }
+        function resetDemo() {
+            localStorage.clear();
+            location.reload();
+        }
+        window.onload = function() {
+            if (localStorage.getItem('loggedIn') === 'true') {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('loggedInSection').classList.remove('hidden');
+                document.getElementById('welcomeMsg').textContent = 'Welcome back! You are logged in.';
+            } else {
+                document.getElementById('username').value = VALID_USER; // Pre-fill for easy testing
+            }
+            updateRateLimitUI();
+        };
+    </script>
+</body>
+</html>

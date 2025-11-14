@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Tag Remover (Strip Tags from User Input)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .output {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .demo-pair {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .demo-box {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .demo-original {
+            border-color: #ffc107;
+        }
+        .demo-stripped {
+            border-color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Build a Function to Remove HTML Tags from User Input</h1>
+    <div class="container">
+        <div class="warning">
+            <strong>Warning:</strong> This is a client-side demo for educational purposes. The function uses regex to strip HTML tags, preventing them from rendering (e.g., `<b>bold</b>` → `bold`). It's basic and may not handle all edge cases (e.g., malformed tags). For production, use libraries like DOMPurify. Test with input like `<b>Bold</b> <script>alert('XSS')</script>`.
+        </div>
+        <label for="inputText">Enter text with HTML tags:</label>
+        <textarea id="inputText" rows="4" placeholder="e.g., &lt;b&gt;Bold text&lt;/b&gt; with &lt;script&gt;alert('XSS')&lt;/script&gt;"></textarea>
+        <button onclick="stripAndDemo()">Strip HTML Tags</button>
+        <button onclick="clearForm()">Clear</button>
+        <div id="demoSection" style="display: none;">
+            <h3>Demo: Original vs. Stripped (Safe Plain Text)</h3>
+            <p>Below shows the original input (with tags that could render HTML/execute scripts) vs. the stripped version (plain text only).</p>
+            <div class="demo-pair">
+                <div class="demo-box demo-original">
+                    <strong>Original (With Tags - Could Render/Execute):</strong><br>
+                    <div id="originalDisplay"></div>
+                </div>
+                <div class="demo-box demo-stripped">
+                    <strong>Stripped (Plain Text - Tags Removed):</strong><br>
+                    <div id="strippedDisplay"></div>
+                </div>
+            </div>
+        </div>
+        <label for="output">Stripped Output (Plain Text):</label>
+        <div id="output" class="output">Stripped result will appear here...</div>
+    </div>
+    <script>
+        function stripHtmlTags(text) {
+            return text.replace(/<[^>]*>/g, '');
+        }
+        function stripAndDemo() {
+            const input = document.getElementById('inputText').value;
+            const output = document.getElementById('output');
+            const originalDisplay = document.getElementById('originalDisplay');
+            const strippedDisplay = document.getElementById('strippedDisplay');
+            const demoSection = document.getElementById('demoSection');
+            if (!input.trim()) {
+                output.textContent = 'Please enter some text with HTML tags to strip.';
+                output.className = 'output danger';
+                demoSection.style.display = 'none';
+                return;
+            }
+            const stripped = stripHtmlTags(input);
+            output.textContent = stripped;
+            output.className = 'output success';
+            originalDisplay.textContent = input;  
+            strippedDisplay.textContent = stripped;  
+            demoSection.style.display = 'block';
+        }
+        function clearForm() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('output').textContent = 'Stripped result will appear here...';
+            document.getElementById('output').className = 'output';
+            document.getElementById('demoSection').style.display = 'none';
+            document.getElementById('originalDisplay').textContent = '';
+            document.getElementById('strippedDisplay').textContent = '';
+        }
+    </script>
+</body>
+</html>

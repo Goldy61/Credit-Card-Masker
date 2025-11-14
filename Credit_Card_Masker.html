@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Masker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px; /* Prevent zoom on mobile */
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        #output {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 50px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 18px;
+            letter-spacing: 1px;
+        }
+        .error {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Credit Card Number Masker</h1>
+    <div class="container">
+        <label for="cardNumber">Enter your credit card number (16 digits):</label>
+        <input type="text" id="cardNumber" placeholder="1234 5678 9101 1121" maxlength="19" pattern="\d{4} \d{4} \d{4} \d{4}">
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <button onclick="maskCard()">Mask Card Number</button>
+        <button onclick="clearForm()">Clear</button>
+
+        <label for="output">Masked Result:</label>
+        <div id="output">Your masked card number will appear here...</div>
+    </div>
+
+    <script>
+        // Format input as user types (add spaces every 4 digits)
+        document.getElementById('cardNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, ''); // Remove existing spaces
+            value = value.replace(/[^\d]/g, ''); // Keep only digits
+            let formatted = '';
+            for (let i = 0; i < value.length; i++) {
+                if (i > 0 && i % 4 === 0) {
+                    formatted += ' ';
+                }
+                formatted += value[i];
+            }
+            e.target.value = formatted;
+        });
+
+        function maskCard() {
+            const input = document.getElementById('cardNumber');
+            const errorDiv = document.getElementById('error');
+            const output = document.getElementById('output');
+
+            // Clear previous error
+            errorDiv.style.display = 'none';
+            output.textContent = '';
+
+            // Validate: exactly 16 digits (ignoring spaces)
+            let digits = input.value.replace(/\s/g, '');
+            if (digits.length !== 16 || !/^\d{16}$/.test(digits)) {
+                errorDiv.textContent = 'Please enter a valid 16-digit credit card number.';
+                errorDiv.style.display = 'block';
+                input.focus();
+                return;
+            }
+
+            // Mask: show only last 4 digits, with asterisks and spaces
+            const masked = '**** **** **** ' + digits.slice(-4);
+            output.textContent = masked;
+        }
+
+        function clearForm() {
+            document.getElementById('cardNumber').value = '';
+            document.getElementById('output').textContent = 'Your masked card number will appear here...';
+            document.getElementById('error').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

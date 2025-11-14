@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanitize User Input for HTML Insertion (DOM XSS Prevention)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .output {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .demo-pair {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .demo-box {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            white-space: pre-wrap;
+            min-height: 80px;
+        }
+        .demo-unsafe {
+            border-color: #dc3545;
+        }
+        .demo-safe {
+            border-color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+        #sanitizedInsertion {
+            border: 2px solid #28a745;
+            padding: 15px;
+            margin-top: 10px;
+            background-color: #f8fff9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Implement a Function to Sanitize User Input Before Inserting into an HTML Element (DOM XSS Prevention)</h1>
+    <div class="container">
+        <div class="warning">
+            <strong>Warning:</strong> This is a client-side demo for educational purposes. The sanitization function escapes HTML special characters to prevent DOM-based XSS attacks when inserting user input via `innerHTML`. Without sanitization, malicious scripts could execute. Test with input like `<script>alert('XSS')</script>` or `<img src=x onerror=alert('XSS')>`. For production, use robust libraries like DOMPurify.
+        </div>
+
+        <label for="inputText">Enter potentially malicious user input:</label>
+        <textarea id="inputText" rows="4" placeholder="e.g., &lt;script&gt;alert('XSS')&lt;/script&gt; or &lt;img src=x onerror=alert('XSS')&gt;"></textarea>
+
+        <button onclick="sanitizeAndInsert()">Sanitize & Insert Safely</button>
+        <button onclick="clearForm()">Clear</button>
+
+
+        <div id="demoSection" style="display: none;">
+            <h3>Demo: Unsafe vs. Safe Insertion via innerHTML</h3>
+            <p>Below demonstrates the risk: "Unsafe" inserts raw input (could execute JS), "Safe" sanitizes first (prevents execution).</p>
+            <div class="demo-pair">
+                <div class="demo-box demo-unsafe">
+                    <strong>Unsafe Insertion (Raw via innerHTML - XSS Risk!):</strong><br>
+                    <div id="unsafeInsertion"></div>
+                </div>
+                <div class="demo-box demo-safe">
+                    <strong>Safe Insertion (Sanitized via innerHTML - No XSS):</strong><br>
+                    <div id="safeInsertion"></div>
+                </div>
+            </div>
+        </div>
+
+        <label for="output">Sanitized Output (Escaped for Safety):</label>
+        <div id="output" class="output">Sanitized result will appear here...</div>
+
+     
+        <div id="sanitizedInsertion" style="display: none;">
+            <strong>Example: Inserted into HTML Element (Safe):</strong><br>
+            <div id="finalInsertion"></div>
+        </div>
+    </div>
+
+    <script>
+       
+        function sanitizeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'  
+            };
+            return text.replace(/[&<>"']/g, (match) => map[match]);
+        }
+
+        function sanitizeAndInsert() {
+            const input = document.getElementById('inputText').value;
+            const output = document.getElementById('output');
+            const unsafeInsertion = document.getElementById('unsafeInsertion');
+            const safeInsertion = document.getElementById('safeInsertion');
+            const finalInsertion = document.getElementById('finalInsertion');
+            const demoSection = document.getElementById('demoSection');
+            const sanitizedInsertion = document.getElementById('sanitizedInsertion');
+
+            if (!input.trim()) {
+                output.textContent = 'Please enter some text to sanitize.';
+                output.className = 'output danger';
+                demoSection.style.display = 'none';
+                sanitizedInsertion.style.display = 'none';
+                return;
+            }
+
+            const sanitized = sanitizeHtml(input);
+
+       
+            output.textContent = sanitized;
+            output.className = 'output success';
+
+            
+            unsafeInsertion.innerHTML = input;  
+            safeInsertion.innerHTML = sanitized;  
+
+           
+            finalInsertion.innerHTML = `<p>User input: ${sanitized}</p>`;
+            demoSection.style.display = 'block';
+            sanitizedInsertion.style.display = 'block';
+        }
+
+        function clearForm() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('output').textContent = 'Sanitized result will appear here...';
+            document.getElementById('output').className = 'output';
+            document.getElementById('demoSection').style.display = 'none';
+            document.getElementById('sanitizedInsertion').style.display = 'none';
+            document.getElementById('unsafeInsertion').innerHTML = '';
+            document.getElementById('safeInsertion').innerHTML = '';
+            document.getElementById('finalInsertion').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
